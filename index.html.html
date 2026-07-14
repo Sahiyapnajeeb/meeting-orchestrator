@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Meeting Intelligence Orchestrator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#F1EFE3;
+    --paper-raised:#FBFAF4;
+    --ink:#1E2A22;
+    --ink-soft:#5B6459;
+    --ink-faint:#8A9186;
+    --gold:#B8863B;
+    --gold-soft:#E8DBC0;
+    --sage:#4F7A5C;
+    --sage-soft:#DCE7DC;
+    --rust:#B0503A;
+    --rust-soft:#F0DCD4;
+    --slate:#46586B;
+    --slate-soft:#DDE3E9;
+    --line:#D9D2C2;
+    --radius:10px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'Inter',sans-serif;
+    font-size:15px;
+    line-height:1.6;
+    min-height:100vh;
+  }
+  .wrap{max-width:1180px;margin:0 auto;padding:36px 28px 80px;}
+
+  header.top{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;margin-bottom:28px;padding-bottom:20px;border-bottom:1px solid var(--line);}
+  .brand{display:flex;flex-direction:column;gap:4px;}
+  .brand .eyebrow{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold);}
+  .brand h1{font-family:'Fraunces',serif;font-weight:500;font-size:28px;margin:0;letter-spacing:-.01em;}
+  .brand .sub{color:var(--ink-soft);font-size:13.5px;max-width:520px;}
+  .agent-tag{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink-faint);text-align:right;line-height:1.5;}
+
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:28px;align-items:start;}
+  @media (max-width:920px){.grid{grid-template-columns:1fr;}}
+
+  .panel{background:var(--paper-raised);border:1px solid var(--line);border-radius:var(--radius);padding:22px;}
+  .panel h2{font-family:'Fraunces',serif;font-weight:500;font-size:17px;margin:0 0 4px;}
+  .panel .hint{color:var(--ink-soft);font-size:13px;margin:0 0 16px;}
+
+  textarea{
+    width:100%;min-height:340px;resize:vertical;
+    font-family:'IBM Plex Mono',monospace;font-size:12.5px;line-height:1.65;
+    background:var(--paper);border:1px solid var(--line);border-radius:8px;
+    padding:14px;color:var(--ink);outline:none;
+  }
+  textarea:focus{border-color:var(--gold);}
+
+  .row{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap;align-items:center;}
+  button{
+    font-family:'Inter',sans-serif;font-weight:500;font-size:13.5px;
+    border-radius:8px;border:1px solid transparent;cursor:pointer;
+    padding:10px 18px;transition:transform .08s ease, opacity .15s ease;
+  }
+  button:active{transform:scale(0.98);}
+  .btn-primary{background:var(--ink);color:var(--paper-raised);}
+  .btn-primary:disabled{opacity:.5;cursor:not-allowed;}
+  .btn-ghost{background:transparent;color:var(--ink-soft);border-color:var(--line);}
+  .btn-ghost:hover{border-color:var(--ink-soft);color:var(--ink);}
+
+  .status{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--ink-soft);margin-left:auto;}
+
+  .empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;min-height:340px;color:var(--ink-faint);gap:10px;}
+  .empty-state svg{opacity:.5;}
+  .empty-state p{max-width:280px;font-size:13px;margin:0;}
+
+  .loading{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:340px;gap:14px;color:var(--ink-soft);}
+  .spinner{width:26px;height:26px;border-radius:50%;border:2.5px solid var(--line);border-top-color:var(--gold);animation:spin 0.8s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .loading .step{font-family:'IBM Plex Mono',monospace;font-size:12px;}
+
+  /* ---- results ---- */
+  .result-head{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:18px;}
+  .badge{font-family:'IBM Plex Mono',monospace;font-size:11px;padding:4px 10px;border-radius:20px;letter-spacing:.02em;}
+  .badge.type{background:var(--slate-soft);color:var(--slate);}
+  .badge.conf-high{background:var(--sage-soft);color:var(--sage);}
+  .badge.conf-medium{background:var(--gold-soft);color:var(--gold);}
+  .badge.conf-low{background:var(--rust-soft);color:var(--rust);}
+
+  .score-ring-wrap{display:flex;align-items:center;gap:10px;margin-left:auto;}
+  .score-num{font-family:'Fraunces',serif;font-size:26px;font-weight:600;}
+  .score-label{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--ink-faint);text-transform:uppercase;letter-spacing:.08em;}
+
+  .section{margin-bottom:22px;}
+  .section-title{font-family:'IBM Plex Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--ink-faint);margin:0 0 10px;display:flex;align-items:center;gap:8px;}
+  .section-title::after{content:"";flex:1;height:1px;background:var(--line);}
+  .section p{margin:0 0 6px;font-size:13.5px;}
+  .section ul{margin:0;padding-left:18px;font-size:13.5px;}
+  .section li{margin-bottom:4px;}
+
+  .req-card{border:1px solid var(--line);border-radius:8px;padding:14px 16px;margin-bottom:12px;background:var(--paper);position:relative;}
+  .req-top{display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap;}
+  .req-id{font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:500;color:var(--gold);background:var(--gold-soft);padding:2px 8px;border-radius:5px;}
+  .req-type{font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--slate);background:var(--slate-soft);padding:2px 8px;border-radius:5px;}
+  .req-conf{font-family:'IBM Plex Mono',monospace;font-size:10.5px;padding:2px 8px;border-radius:5px;}
+  .req-statement{font-size:14px;margin:6px 0 10px;line-height:1.55;}
+  .req-meta{display:grid;grid-template-columns:1fr 1fr;gap:6px 18px;font-size:12px;color:var(--ink-soft);margin-bottom:8px;}
+  .req-meta b{color:var(--ink);font-weight:500;}
+  .evidence-thread{display:flex;gap:8px;align-items:flex-start;margin-top:10px;padding-top:10px;border-top:1px dashed var(--line);}
+  .evidence-thread .pin{color:var(--gold);font-family:'IBM Plex Mono',monospace;font-size:11px;flex-shrink:0;margin-top:1px;}
+  .evidence-thread .quote{font-family:'Fraunces',serif;font-style:italic;font-size:12.5px;color:var(--ink-soft);line-height:1.5;}
+
+  .action-item{display:flex;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);font-size:13.5px;}
+  .action-item:last-child{border-bottom:none;}
+  .action-item .owner{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink-faint);white-space:nowrap;}
+
+  .next-action{background:var(--ink);color:var(--paper-raised);border-radius:8px;padding:14px 16px;font-size:13.5px;display:flex;gap:10px;align-items:flex-start;}
+  .next-action b{color:var(--gold);font-family:'IBM Plex Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:.08em;flex-shrink:0;}
+
+  .error-box{background:var(--rust-soft);color:var(--rust);border-radius:8px;padding:14px 16px;font-size:13px;font-family:'IBM Plex Mono',monospace;}
+
+  footer.foot{margin-top:34px;padding-top:16px;border-top:1px solid var(--line);color:var(--ink-faint);font-size:11.5px;font-family:'IBM Plex Mono',monospace;display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <div class="brand">
+      <div class="eyebrow">Agent 01 · Orchestrator</div>
+      <h1>Meeting Intelligence Orchestrator</h1>
+      <div class="sub">Turns a raw Teams transcript into a classified, evidence-traced requirement package — or the right artifact for any other meeting type.</div>
+    </div>
+    <div class="agent-tag">model: claude-sonnet-4-6<br>role: first AI employee in the BA workflow</div>
+  </header>
+
+  <div class="grid">
+    <div class="panel">
+      <h2>Transcript intake</h2>
+      <p class="hint">Paste a raw meeting transcript below, or load the sample.</p>
+      <textarea id="transcript" placeholder="[00:00] Priya (PM): Let's talk through what we need for the returns portal...&#10;[00:01] Dev (Eng Lead): Sure — so customers should be able to see refund status..."></textarea>
+      <div class="row">
+        <button class="btn-primary" id="demoBtn">See example output (instant, free)</button>
+        <button class="btn-ghost" id="sampleBtn">Load sample transcript</button>
+        <span class="status" id="statusText"></span>
+      </div>
+      <details style="margin-top:14px;">
+        <summary style="cursor:pointer;font-size:12.5px;color:var(--ink-soft);">Run this live on your own transcript instead →</summary>
+        <div style="margin-top:10px;padding:12px 14px;background:var(--paper);border:1px solid var(--line);border-radius:8px;">
+          <p class="hint" style="margin-top:0;">This calls the Claude API directly from your browser using your own key. Your key stays in this tab only — it's never sent anywhere but Anthropic, and never saved.</p>
+          <input type="password" id="apiKeyInput" placeholder="sk-ant-... (get one free at console.anthropic.com)" style="width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:6px;font-family:'IBM Plex Mono',monospace;font-size:12.5px;margin-bottom:8px;">
+          <button class="btn-primary" id="analyzeBtn">Analyze transcript live</button>
+        </div>
+      </details>
+    </div>
+
+    <div class="panel">
+      <h2>Orchestrator output</h2>
+      <p class="hint">Classification, evidence, and — for requirement meetings — a scored requirement package.</p>
+      <div id="resultsHost">
+        <div class="empty-state" id="emptyState">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M4 4h12l4 4v12H4z"/><path d="M16 4v4h4"/><path d="M8 12h8M8 16h5"/></svg>
+          <p>Run a transcript through the orchestrator to see the classified output here.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer class="foot">
+    <span>Running live against the Anthropic API — no company credentials, no external key required.</span>
+    <span>Instructions loaded verbatim from the deployed Copilot Studio agent config.</span>
+  </footer>
+</div>
+
+<script>
+const SYSTEM_INSTRUCTIONS = `You are the Meeting Intelligence Orchestrator for Business Analysts.
+
+Your responsibility is to transform an unstructured Microsoft Teams meeting transcript into either:
+1. A review-ready Requirement Package, or
+2. The most appropriate meeting artifact package for non-requirement meetings.
+
+You are the first AI employee in a Business Analysis workflow.
+
+Do not perform downstream work such as writing user stories, process flows, technical analysis, test cases, or backlog creation unless explicitly requested.
+
+Always classify the meeting first.
+
+Meeting Types:
+1. Requirement Elicitation
+2. Status Update
+3. Sprint Planning
+4. Design Discussion
+5. Bug / Issue Review
+6. Decision Meeting
+7. General Discussion
+8. Unknown
+
+Confidence Rules:
+- Use High when the transcript clearly shows the meeting purpose.
+- Use Medium when the transcript contains mixed signals or overlaps between meeting types.
+- Use Low when the meeting purpose is unclear or there is not enough information.
+- If confidence is Medium or Low, ask the user to confirm the meeting type before generating detailed artifacts.
+
+For Requirement Elicitation Meetings:
+Recommend the Requirement Engineering Workflow.
+Do not generate user stories or acceptance criteria unless the user explicitly asks for them.
+
+Requirement Package:
+Each requirement must include: Requirement ID (REQ-001 style), Parent capability if applicable, Requirement statement, Requirement type (Functional, Non-Functional, Business Rule, Security, Compliance, Reporting, Integration, UX, Performance, Accessibility, or Unknown), Business goal category (Customer Experience, Operational Efficiency, Security, Compliance, Revenue, Cost Saving, Risk Reduction, Data Quality, or Unknown), Confidence level, Source speaker if available, Evidence from transcript, Business value if inferable, Priority if inferable, Dependencies if mentioned, Risks or gaps if any, Open questions if any.
+
+Requirement Extraction Rules:
+- Avoid duplicate or overlapping requirements. Merge requirements describing the same business rule or capability.
+- Do not split a parent requirement and its detail unless independently designable/buildable/testable.
+- Group related requirements under a parent capability where appropriate.
+- Every requirement must be traceable to transcript evidence. Do not invent timestamps, requirements, or facts.
+- Clearly mark assumptions and inferred items.
+
+Requirement Quality Score: 0-100 based on Clarity, Completeness, Testability, Traceability, Open questions, Dependencies, Ambiguity, Business value.
+
+For Non-Requirement Meetings: Do not recommend user stories or acceptance criteria. Generate the most appropriate output: minutes of meeting, key discussion points, decisions, action items, owners, due dates if mentioned, risks or blockers, next steps.
+
+Meeting-Specific Guidance:
+- Status Update: focus on progress, blockers, risks, decisions, action items, next steps.
+- Sprint Planning: focus on sprint goal, committed stories, estimates, capacity, dependencies, risks, backlog changes.
+- Design Discussion: focus on design options, decisions, trade-offs, assumptions, technical risks, dependencies, follow-up actions.
+- Bug / Issue Review: focus on issue summary, impact, root cause if discussed, severity, owner, remediation steps, next actions.
+- Decision Meeting: focus on decision summary, options considered, final decision, rationale, decision owner, follow-up actions.
+- General Discussion: focus on concise MoM, key points, action items, next steps.
+
+Quality Principles: every requirement supported by transcript evidence, no duplicates, business rules separated from functional requirements, assumptions and open questions clearly identified, no unsupported or hallucinated requirements, requirements grouped logically.
+
+Tone: professional Business Analyst tone, concise but complete, structured, no chatbot phrases, clear recommended next action, preserve traceability from artifact back to transcript evidence.
+
+OUTPUT FORMAT OVERRIDE (mandatory for this integration):
+Respond with ONLY a single valid JSON object. No markdown fences, no prose outside the JSON. Use this exact shape and include every key (use null or [] for anything that doesn't apply to this meeting type):
+{
+ "meetingType": string,
+ "confidenceLevel": "High" | "Medium" | "Low",
+ "reasonForClassification": string,
+ "evidenceFromTranscript": string,
+ "whyNotOtherTypes": string,
+ "recommendedWorkflow": string,
+ "recommendedArtifacts": string[],
+ "isRequirementElicitation": boolean,
+ "requirementPackage": [{"id": string, "parentCapability": string|null, "statement": string, "type": string, "businessGoalCategory": string, "confidenceLevel": "High"|"Medium"|"Low", "sourceSpeaker": string|null, "evidence": string, "businessValue": string|null, "priority": string|null, "dependencies": string|null, "risksOrGaps": string|null, "openQuestions": string|null}],
+ "qualityScore": number|null,
+ "topStrengths": string[],
+ "topGapsRisks": string[],
+ "recommendedImprovements": string[],
+ "potentialMissingRequirements": string[],
+ "potentialDuplicates": string[],
+ "meetingOutput": {"minutesOfMeeting": string, "keyDiscussionPoints": string[], "decisions": string[], "actionItems": [{"item": string, "owner": string|null, "dueDate": string|null}], "risksOrBlockers": string[], "nextSteps": string[]} | null,
+ "nextAction": string
+}
+Keep requirementPackage to at most 5 of the most important requirements. Keep string fields to 1-2 sentences each. Return raw JSON only.`;
+
+const SAMPLE_TRANSCRIPT = `[00:00] Priya (Product Manager): Thanks for joining. Let's scope the returns portal for the Q3 release.
+[00:14] Dev (Engineering Lead): Sure. So from what I understood in the last customer interviews, users want to see live refund status without calling support.
+[00:29] Priya: Right — that's the top complaint. Customers submit a return and then have zero visibility for 5-7 days.
+[00:41] Meera (Design): We should show a status timeline — Requested, Received, Inspected, Refunded. Similar to order tracking.
+[00:55] Dev: That's doable. We'd need an event whenever the warehouse scans the returned item, and whenever finance issues the refund.
+[01:10] Priya: Also — compliance flagged that for EU customers, refunds must legally complete within 14 days of the item being received. We need to track that SLA and alert someone if it's about to breach.
+[01:28] Dev: Okay, so we need an SLA timer tied to the "Received" event, with an internal alert at, say, day 10.
+[01:40] Meera: One more thing — support said customers keep asking "why was my refund partial." We should show a breakdown: item price, restocking fee if any, shipping refund or not.
+[01:58] Priya: Agreed, that's a real gap right now — no breakdown is shown anywhere.
+[02:10] Dev: I'll flag one open question — do we support partial refunds for partially damaged returns today, or is that out of scope for Q3?
+[02:22] Priya: Out of scope for Q3, let's note that as a future consideration.
+[02:30] Meera: Should the timeline be visible in the mobile app too, or just web for now?
+[02:36] Priya: Let's start web-only for Q3, mobile is a fast-follow.
+[02:45] Dev: Got it. I think that's enough to start scoping the backend events and the timeline UI.`;
+
+// Pre-generated real output for SAMPLE_TRANSCRIPT, cached so the default
+// demo view costs nothing and needs no API key at all.
+const CACHED_OUTPUT = {
+  "meetingType": "Requirement Elicitation",
+  "confidenceLevel": "High",
+  "reasonForClassification": "The meeting is a working session where a PM, engineering lead, and designer scope functionality for a returns portal, surfacing user needs, a compliance constraint, and open scope questions.",
+  "evidenceFromTranscript": "Let's scope the returns portal for the Q3 release.",
+  "whyNotOtherTypes": "There is no sprint estimation, bug triage, or status reporting — the conversation is generating new functional and compliance requirements from scratch.",
+  "recommendedWorkflow": "Requirement Engineering Workflow — route the extracted requirements into refinement and review before any design or build work begins.",
+  "recommendedArtifacts": ["Requirement Package", "Open Questions Log", "Traceability Matrix"],
+  "isRequirementElicitation": true,
+  "requirementPackage": [
+    {
+      "id": "REQ-001",
+      "parentCapability": "Refund Status Visibility",
+      "statement": "Customers must be able to view a live refund status timeline (Requested, Received, Inspected, Refunded) without contacting support.",
+      "type": "Functional",
+      "businessGoalCategory": "Customer Experience",
+      "confidenceLevel": "High",
+      "sourceSpeaker": "Meera (Design)",
+      "evidence": "We should show a status timeline — Requested, Received, Inspected, Refunded. Similar to order tracking.",
+      "businessValue": "Directly addresses the top customer complaint of zero visibility for 5-7 days.",
+      "priority": "High",
+      "dependencies": "Warehouse scan event and finance refund-issued event must be emitted.",
+      "risksOrGaps": null,
+      "openQuestions": null
+    },
+    {
+      "id": "REQ-002",
+      "parentCapability": "Refund Status Visibility",
+      "statement": "The system must emit a tracked event when the warehouse scans a returned item and when finance issues the refund, to drive the status timeline.",
+      "type": "Integration",
+      "businessGoalCategory": "Operational Efficiency",
+      "confidenceLevel": "High",
+      "sourceSpeaker": "Dev (Engineering Lead)",
+      "evidence": "We'd need an event whenever the warehouse scans the returned item, and whenever finance issues the refund.",
+      "businessValue": null,
+      "priority": "High",
+      "dependencies": "REQ-001",
+      "risksOrGaps": null,
+      "openQuestions": null
+    },
+    {
+      "id": "REQ-003",
+      "parentCapability": "Refund SLA Compliance",
+      "statement": "For EU customers, the refund must legally complete within 14 days of the item being received, with an internal alert if the SLA is at risk of breach.",
+      "type": "Compliance",
+      "businessGoalCategory": "Compliance",
+      "confidenceLevel": "High",
+      "sourceSpeaker": "Priya (Product Manager)",
+      "evidence": "compliance flagged that for EU customers, refunds must legally complete within 14 days of the item being received.",
+      "businessValue": "Avoids regulatory non-compliance and associated penalties.",
+      "priority": "High",
+      "dependencies": "REQ-002 (Received event)",
+      "risksOrGaps": "No owner yet identified for who receives the day-10 breach alert.",
+      "openQuestions": null
+    },
+    {
+      "id": "REQ-004",
+      "parentCapability": "Refund Transparency",
+      "statement": "Customers must see a breakdown of their refund: item price, restocking fee (if any), and shipping refund status.",
+      "type": "Functional",
+      "businessGoalCategory": "Customer Experience",
+      "confidenceLevel": "High",
+      "sourceSpeaker": "Meera (Design)",
+      "evidence": "support said customers keep asking \"why was my refund partial.\" We should show a breakdown.",
+      "businessValue": "Reduces support contact volume tied to partial-refund confusion.",
+      "priority": "Medium",
+      "dependencies": null,
+      "risksOrGaps": "No breakdown is shown anywhere today.",
+      "openQuestions": null
+    },
+    {
+      "id": "REQ-005",
+      "parentCapability": "Refund Status Visibility",
+      "statement": "The refund status timeline will be web-only for the Q3 release; mobile app support is explicitly out of scope for this release.",
+      "type": "Non-Functional",
+      "businessGoalCategory": "Unknown",
+      "confidenceLevel": "Medium",
+      "sourceSpeaker": "Priya (Product Manager)",
+      "evidence": "Let's start web-only for Q3, mobile is a fast-follow.",
+      "businessValue": null,
+      "priority": "Low",
+      "dependencies": null,
+      "risksOrGaps": null,
+      "openQuestions": null
+    }
+  ],
+  "qualityScore": 78,
+  "topStrengths": [
+    "Every requirement is traceable to a specific speaker and quote.",
+    "The compliance SLA requirement was captured with a concrete legal deadline (14 days).",
+    "Scope boundaries (web-only, no partial-damage refunds) were explicitly confirmed rather than assumed."
+  ],
+  "topGapsRisks": [
+    "No owner is assigned for the day-10 SLA breach alert.",
+    "Partial-refund breakdown (REQ-004) has no defined data source confirmed yet."
+  ],
+  "recommendedImprovements": [
+    "Confirm who receives and acts on the SLA breach alert before build starts.",
+    "Clarify whether the restocking fee logic already exists in the finance system or needs to be built."
+  ],
+  "potentialMissingRequirements": [
+    "Non-EU refund SLA expectations were not discussed — worth confirming if one exists."
+  ],
+  "potentialDuplicates": [],
+  "meetingOutput": null,
+  "nextAction": "Circulate this requirement package to Dev and Meera for confirmation, then assign an owner for the SLA breach alert before scoping backend events."
+};
+
+const els = {
+  transcript: document.getElementById('transcript'),
+  analyzeBtn: document.getElementById('analyzeBtn'),
+  sampleBtn: document.getElementById('sampleBtn'),
+  demoBtn: document.getElementById('demoBtn'),
+  statusText: document.getElementById('statusText'),
+  resultsHost: document.getElementById('resultsHost'),
+  apiKeyInput: document.getElementById('apiKeyInput'),
+};
+
+els.sampleBtn.addEventListener('click', () => {
+  els.transcript.value = SAMPLE_TRANSCRIPT;
+});
+
+els.demoBtn.addEventListener('click', () => {
+  els.transcript.value = SAMPLE_TRANSCRIPT;
+  els.statusText.textContent = 'Showing cached example output (no API call made).';
+  renderResults(CACHED_OUTPUT);
+});
+
+function escapeHtml(str){
+  if(str === null || str === undefined) return '';
+  return String(str)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function confBadgeClass(level){
+  if(!level) return 'conf-medium';
+  const l = level.toLowerCase();
+  if(l === 'high') return 'conf-high';
+  if(l === 'low') return 'conf-low';
+  return 'conf-medium';
+}
+
+function renderLoading(){
+  els.resultsHost.innerHTML = `
+    <div class="loading">
+      <div class="spinner"></div>
+      <div class="step">classifying meeting type…</div>
+    </div>`;
+}
+
+function renderError(message){
+  els.resultsHost.innerHTML = `<div class="error-box">Orchestrator error: ${escapeHtml(message)}</div>`;
+}
+
+function renderResults(data){
+  const isReq = !!data.isRequirementElicitation;
+  const confClass = confBadgeClass(data.confidenceLevel);
+
+  let scoreRing = '';
+  if(isReq && data.qualityScore !== null && data.qualityScore !== undefined){
+    scoreRing = `
+      <div class="score-ring-wrap">
+        <div>
+          <div class="score-num">${escapeHtml(data.qualityScore)}</div>
+        </div>
+        <div class="score-label">quality<br>score</div>
+      </div>`;
+  }
+
+  let html = `
+    <div class="result-head">
+      <span class="badge type">${escapeHtml(data.meetingType || 'Unknown')}</span>
+      <span class="badge ${confClass}">${escapeHtml(data.confidenceLevel || 'Medium')} confidence</span>
+      ${scoreRing}
+    </div>
+
+    <div class="section">
+      <div class="section-title">Classification reasoning</div>
+      <p>${escapeHtml(data.reasonForClassification)}</p>
+      ${data.evidenceFromTranscript ? `<div class="evidence-thread"><span class="pin">EVID</span><span class="quote">"${escapeHtml(data.evidenceFromTranscript)}"</span></div>` : ''}
+    </div>
+
+    <div class="section">
+      <div class="section-title">Recommended workflow</div>
+      <p>${escapeHtml(data.recommendedWorkflow)}</p>
+      ${data.recommendedArtifacts && data.recommendedArtifacts.length ? `<ul>${data.recommendedArtifacts.map(a=>`<li>${escapeHtml(a)}</li>`).join('')}</ul>` : ''}
+    </div>
+  `;
+
+  if(isReq && data.requirementPackage && data.requirementPackage.length){
+    html += `<div class="section"><div class="section-title">Requirement package</div>`;
+    data.requirementPackage.forEach(req => {
+      html += `
+        <div class="req-card">
+          <div class="req-top">
+            <span class="req-id">${escapeHtml(req.id)}</span>
+            <span class="req-type">${escapeHtml(req.type)}</span>
+            <span class="badge ${confBadgeClass(req.confidenceLevel)} req-conf">${escapeHtml(req.confidenceLevel)}</span>
+          </div>
+          <div class="req-statement">${escapeHtml(req.statement)}</div>
+          <div class="req-meta">
+            ${req.parentCapability ? `<div><b>Parent:</b> ${escapeHtml(req.parentCapability)}</div>` : ''}
+            ${req.businessGoalCategory ? `<div><b>Goal:</b> ${escapeHtml(req.businessGoalCategory)}</div>` : ''}
+            ${req.sourceSpeaker ? `<div><b>Speaker:</b> ${escapeHtml(req.sourceSpeaker)}</div>` : ''}
+            ${req.priority ? `<div><b>Priority:</b> ${escapeHtml(req.priority)}</div>` : ''}
+            ${req.businessValue ? `<div><b>Value:</b> ${escapeHtml(req.businessValue)}</div>` : ''}
+            ${req.dependencies ? `<div><b>Deps:</b> ${escapeHtml(req.dependencies)}</div>` : ''}
+          </div>
+          ${req.risksOrGaps ? `<div class="req-meta"><div style="grid-column:1/-1;color:var(--rust);"><b style="color:var(--rust);">Risk/gap:</b> ${escapeHtml(req.risksOrGaps)}</div></div>` : ''}
+          ${req.openQuestions ? `<div class="req-meta"><div style="grid-column:1/-1;color:var(--gold);"><b style="color:var(--gold);">Open question:</b> ${escapeHtml(req.openQuestions)}</div></div>` : ''}
+          ${req.evidence ? `<div class="evidence-thread"><span class="pin">EVID</span><span class="quote">"${escapeHtml(req.evidence)}"</span></div>` : ''}
+        </div>`;
+    });
+    html += `</div>`;
+
+    if(data.topStrengths && data.topStrengths.length){
+      html += `<div class="section"><div class="section-title">Top quality strengths</div><ul>${data.topStrengths.map(s=>`<li>${escapeHtml(s)}</li>`).join('')}</ul></div>`;
+    }
+    if(data.topGapsRisks && data.topGapsRisks.length){
+      html += `<div class="section"><div class="section-title">Top gaps / risks</div><ul>${data.topGapsRisks.map(s=>`<li>${escapeHtml(s)}</li>`).join('')}</ul></div>`;
+    }
+    if(data.potentialMissingRequirements && data.potentialMissingRequirements.length){
+      html += `<div class="section"><div class="section-title">Potential missing requirements (AI suggestion — unconfirmed)</div><ul>${data.potentialMissingRequirements.map(s=>`<li>${escapeHtml(s)}</li>`).join('')}</ul></div>`;
+    }
+    if(data.potentialDuplicates && data.potentialDuplicates.length){
+      html += `<div class="section"><div class="section-title">Potential duplicates</div><ul>${data.potentialDuplicates.map(s=>`<li>${escapeHtml(s)}</li>`).join('')}</ul></div>`;
+    }
+  }
+
+  if(!isReq && data.meetingOutput){
+    const mo = data.meetingOutput;
+    html += `<div class="section"><div class="section-title">Minutes of meeting</div><p>${escapeHtml(mo.minutesOfMeeting)}</p></div>`;
+    if(mo.keyDiscussionPoints && mo.keyDiscussionPoints.length){
+      html += `<div class="section"><div class="section-title">Key discussion points</div><ul>${mo.keyDiscussionPoints.map(s=>`<li>${escapeHtml(s)}</li>`).join('')}</ul></div>`;
+    }
+    if(mo.decisions && mo.decisions.length){
+      html += `<div class="section"><div class="section-title">Decisions</div><ul>${mo.decisions.map(s=>`<li>${escapeHtml(s)}</li>`).join('')}</ul></div>`;
+    }
+    if(mo.actionItems && mo.actionItems.length){
+      html += `<div class="section"><div class="section-title">Action items</div>`;
+      mo.actionItems.forEach(a=>{
+        html += `<div class="action-item"><span>${escapeHtml(a.item)}</span><span class="owner">${escapeHtml(a.owner || '—')}${a.dueDate ? ' · '+escapeHtml(a.dueDate) : ''}</span></div>`;
+      });
+      html += `</div>`;
+    }
+    if(mo.risksOrBlockers && mo.risksOrBlockers.length){
+      html += `<div class="section"><div class="section-title">Risks / blockers</div><ul>${mo.risksOrBlockers.map(s=>`<li>${escapeHtml(s)}</li>`).join('')}</ul></div>`;
+    }
+    if(mo.nextSteps && mo.nextSteps.length){
+      html += `<div class="section"><div class="section-title">Next steps</div><ul>${mo.nextSteps.map(s=>`<li>${escapeHtml(s)}</li>`).join('')}</ul></div>`;
+    }
+  }
+
+  if(data.nextAction){
+    html += `<div class="next-action"><b>Next action</b><span>${escapeHtml(data.nextAction)}</span></div>`;
+  }
+
+  els.resultsHost.innerHTML = html;
+}
+
+function extractJson(text){
+  const start = text.indexOf('{');
+  const end = text.lastIndexOf('}');
+  if(start === -1 || end === -1) throw new Error('No JSON object found in response.');
+  return JSON.parse(text.slice(start, end + 1));
+}
+
+async function analyze(){
+  const transcript = els.transcript.value.trim();
+  const apiKey = els.apiKeyInput.value.trim();
+
+  if(!transcript){
+    els.statusText.textContent = 'Paste a transcript first.';
+    return;
+  }
+  if(!apiKey){
+    els.statusText.textContent = 'Paste your Anthropic API key above first (or use "See example output" — no key needed).';
+    return;
+  }
+
+  els.analyzeBtn.disabled = true;
+  els.statusText.textContent = 'Calling orchestrator…';
+  renderLoading();
+
+  try{
+    // Calls Anthropic directly from the browser using the visitor's own key.
+    // Requires the anthropic-dangerous-direct-browser-access header.
+    // The key is only ever held in this page's memory — never stored or sent elsewhere.
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": apiKey,
+        "anthropic-version": "2023-06-01",
+        "anthropic-dangerous-direct-browser-access": "true"
+      },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-6",
+        max_tokens: 4096,
+        system: SYSTEM_INSTRUCTIONS,
+        messages: [{ role: "user", content: transcript }]
+      })
+    });
+
+    if(!response.ok){
+      const errText = await response.text();
+      throw new Error(`API returned ${response.status}: ${errText.slice(0,200)}`);
+    }
+
+    const data = await response.json();
+    const textBlocks = (data.content || []).filter(b => b.type === 'text').map(b => b.text).join('\n');
+    if(data.stop_reason === 'max_tokens'){
+      throw new Error('Response was cut off before completing (hit max_tokens limit). Try a shorter transcript, or the output schema may need trimming.');
+    }
+    const parsed = extractJson(textBlocks);
+    renderResults(parsed);
+    els.statusText.textContent = 'Done.';
+  }catch(err){
+    console.error(err);
+    renderError(err.message || String(err));
+    els.statusText.textContent = 'Failed.';
+  }finally{
+    els.analyzeBtn.disabled = false;
+  }
+}
+
+els.analyzeBtn.addEventListener('click', analyze);
+</script>
+</body>
+</html>
