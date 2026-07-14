@@ -13,6 +13,10 @@ No installation required.
 - **See Example Output** → Instant demo (no API key required)
 - **Analyze Your Own Transcript** → Bring your own Claude API key and analyze any meeting transcript
 
+Demo Video
+
+https://www.loom.com/share/f146a534bf244e54900a4785a910d4a8
+
 ---
 
 # Screenshot
