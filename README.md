@@ -293,10 +293,6 @@ LinkedIn
 
 https://www.linkedin.com/in/sahiya-p-najeeb/
 
-Portfolio
-
-(Add your portfolio URL)
-
 ---
 
 ⭐ If you found this project interesting, feel free to star the repository or connect with me on LinkedIn.
