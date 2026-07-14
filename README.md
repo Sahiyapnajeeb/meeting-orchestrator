@@ -17,11 +17,14 @@ No installation required.
 
 # Screenshot
 
-![Meeting Intelligence Orchestrator — classified output with requirement package](images/screenshot.png)
+<img width="1912" height="960" alt="image" src="https://github.com/user-attachments/assets/308374c4-0e97-450b-b936-2a1b5c1daedc" />
+
+<img width="1912" height="966" alt="image" src="https://github.com/user-attachments/assets/bac7f23d-b3ff-4034-be56-082a24dbb776" />
 
 *Requirement package detail:*
 
-![Requirement package detail view](images/screenshot-detail.png)
+<img width="525" height="902" alt="image" src="https://github.com/user-attachments/assets/bf7b3a0e-203a-49e6-ba43-66477550c433" />
+
 
 ---
 
